@@ -1,0 +1,33 @@
+import numpy as np
+import pandas as pd
+import matplotlib
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+
+df_por = pd.read_csv('student-por.csv')
+
+df_por.head()
+
+#Look at the distribution of each attribute
+sns.set_style("dark")
+for i in range(len(df_por.columns)):
+    fig, ax = plt.subplots()
+    y=sns.histplot(df_por.iloc[:,i])  
+    labels = [str(round((v/649)*100,0))+"%" if v else '' for v in y.containers[0].datavalues]
+    y.bar_label(y.containers[0], labels=labels)
+    plt.show()
+
+# Create a method to calculate outliers
+def find_outliers_iqr(df):
+    q1=df.quantile(0.25)
+    q3=df.quantile(0.75)
+    iqr=q3-q1
+    outliers = df[((df<(q1-1.5*iqr)) | (df>(q3+1.5*iqr)))]
+    return outliers
