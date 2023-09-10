@@ -1,0 +1,667 @@
+#This project encompasses a preliminary univariate and multivariate analysis of the features inside the dataset
+#The second part of the project encompasses setting up feature engineering and running different regression models 
+#to determine the best fit for the transformed data
+
+```python
+# Import the libraries first
+
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import sklearn
+from sklearn import preprocessing
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+
+
+# We will use matplotlib to plot figures
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import plotly.express as px
+import seaborn as sns
+
+# For regression analysis we will use the statsmodels package
+import statsmodels.formula.api as sm
+
+# For visual inspection of the regression models
+from statsmodels.graphics.regressionplots import plot_regress_exog, plot_fit, plot_leverage_resid2, influence_plot
+
+#Data Preprocessing
+from sklearn.preprocessing import LabelEncoder
+
+import io
+import scipy.stats as stats
+
+from sklearn.svm import LinearSVR
+from sklearn import ensemble
+from sklearn.model_selection import learning_curve
+```
+
+
+```python
+Salaries = pd.read_csv('ds_salaries.csv')
+```
+
+
+```python
+Salaries.head(20)
+```
+
+
+```python
+Salaries.shape
+```
+
+
+```python
+Salaries.columns
+```
+
+
+```python
+Salaries.info()
+```
+
+
+```python
+Salaries.duplicated().sum()
+```
+
+
+```python
+#drop the duplicated rows
+Salaries = Salaries.drop_duplicates()
+```
+
+
+```python
+Salaries.duplicated().sum()
+```
+
+
+```python
+# Reset Index
+Salaries = Salaries.reset_index(drop=True)
+```
+
+
+```python
+Salaries.isnull().value_counts()
+```
+
+
+```python
+Salaries.isnull().sum()
+```
+
+
+```python
+Salaries.describe()
+```
+
+
+```python
+#checking for unique values in each column
+Salaries.nunique()
+```
+
+
+```python
+#printing unique values of categorical variables
+for column in ['company_size','remote_ratio','work_year','experience_level','employment_type','company_location','job_title']:
+    print(Salaries[column].unique())
+```
+
+
+```python
+Salaries[Salaries.duplicated(keep=False)].sort_values('job_title').head(10)
+```
+
+
+```python
+#Renaming the column
+Salaries['company_size'] = Salaries['company_size'].replace({'L': 'Large', 'S': 'Small', 'M': 'Medium'})
+for column in ['company_size']:
+    print(Salaries[column].unique())
+    
+Salaries['experience_level'] = Salaries['experience_level'].replace({'EN': 'Entry-level (Junior)', 'MI': 'Mid-level (Intermediate)', 'SE': 'Senior-level (Expert)',  'EX': 'Executive-level (Director)'})
+for column in ['experience_level']:
+    print(Salaries[column].unique())    
+
+Salaries['employment_type'] = Salaries['employment_type'].replace({'PT':'Part-time','CT': 'Contract','FT': 'Full-time','FL':'Freelance'})
+for column in ['employment_type']:
+    print(Salaries[column].unique())
+
+Salaries['remote_ratio'] = Salaries['remote_ratio'].replace({0:'Onsite',50: 'Hybrid',100: 'Remote'})
+for column in ['remote_ratio']:
+    print(Salaries[column].unique())    
+```
+
+
+```python
+!pip install pycountry
+```
+
+
+```python
+#Transforming the "company_location" and "employee_residence" codes into descriptive names
+
+import pycountry
+def country_name(country_code):
+    try:
+        return pycountry.countries.get(alpha_2=country_code).name
+    except:
+        return 'other'
+
+Salaries['company_location'] = Salaries['company_location'].apply(country_name)
+Salaries['employee_residence'] = Salaries['employee_residence'].apply(country_name)
+for column in ['company_location','employee_residence']:
+    print(Salaries[column].unique())
+
+```
+
+
+```python
+for column in ['company_size','remote_ratio','work_year','experience_level','employment_type','company_location','job_title']:
+    print(Salaries[column].unique())
+```
+
+
+```python
+#seperating numerical and categorical columns
+numerical = ['work_year','salary','salary_in_usd']
+categorical = ['experience_level', 'employment_type', 'job_title', 'salary_currency', 'employee_residence', 'company_location', 'company_size','remote_ratio']
+```
+
+
+```python
+for i in Salaries[categorical].columns:
+    x = Salaries[categorical][i].value_counts()
+    print(i)
+    print(x,'\n')
+```
+
+#### Observations:
+
+1. Dataset has no missing values.
+2. There are 1171 duplicate rows,dropped duplicate rows.
+3. Renaming the values in columns experience_level,company_size,employment_type,remote_ratio for better understanding.
+4. remote_ration chnaged to obj dtype after renaming the column.
+
+
+```python
+Salaries[numerical].describe()
+```
+
+
+```python
+Salaries[categorical].describe()
+```
+
+## Univariate Analysis
+
+
+```python
+#plotting boxplot of numerical features 
+plt.figure(figsize=(12,5))
+features = numerical
+for i in range(0,len(features)):
+    plt.subplot(1,len(features),i+1)
+    sns.boxplot(y=Salaries[features[i]])
+    
+
+
+```
+
+1. The box plot explains that the minimum salary in data science field as USD 5132 dollars, while the maximum is USD 450k. The median salary in data science field is USD 135k.
+2. few outliers are seen in work_year,salary.
+
+
+```python
+#Plotting counts of observations for each experience level
+sns.set(rc={"figure.figsize":(10, 4)})
+plt.title("Number of obseravations for each experience level")
+plt.xlabel('Experiance_level')
+plt.ylabel('Salary')
+
+plot1 = sns.countplot(data=Salaries,x="experience_level")
+
+```
+
+
+```python
+# Creating a pie chart for individuals in each experience level
+level_counts = Salaries['experience_level'].value_counts()
+
+
+plt.figure(figsize=(8,10),dpi=100)
+plt.pie(level_counts.values, labels=level_counts.index, autopct='%1.1f%%')
+plt.title('Distribution of jobs in data science field according to experience level')
+
+plt.show()
+```
+
+
+```python
+#Plotting counts of observations for each employment type
+sns.set(rc={"figure.figsize":(10, 4)})
+plt.title("Number of obseravations for each employment type")
+plt.xlabel('Employment type')
+plt.ylabel('Salary')
+
+plot1 = sns.countplot(data=Salaries,x="employment_type")
+
+```
+
+
+```python
+#Plotting counts of observations for each employment type
+sns.set(rc={"figure.figsize":(10, 4)})
+plt.title("Number of obseravations for each work year")
+plt.xlabel('work year')
+plt.ylabel('Salary')
+
+plot1 = sns.countplot(data=Salaries,x="work_year")
+
+```
+
+
+```python
+#Plotting counts of observations for each employment type
+sns.set(rc={"figure.figsize":(10, 4)})
+plt.title("Number of obseravations for each company size")
+plt.xlabel('company size')
+plt.ylabel('Salary')
+
+plot1 = sns.countplot(data=Salaries,x="company_size")
+
+```
+
+
+```python
+#Plotting counts of observations for each employment type
+sns.set(rc={"figure.figsize":(10, 4)})
+plt.title("Number of obseravations for each remote ratio")
+plt.xlabel('Remote ratio')
+plt.ylabel('Salary')
+
+plot1 = sns.countplot(data=Salaries,x="remote_ratio")
+
+```
+
+
+```python
+plt.figure(figsize = (15,15))
+plt.title('Various job titles in Data Science',fontsize = 20,fontweight = 'bold')
+plt.xlabel('Count')
+plt.ylabel('Job titles',fontsize = 20)
+plot = sns.countplot(data=Salaries,y='job_title',order=Salaries['job_title'].value_counts().index)
+
+
+```
+
+
+```python
+plt.figure(figsize = (15,15))
+plt.title('Employee residence',fontsize = 20,fontweight = 'bold')
+plt.xlabel('Count')
+plt.ylabel('Location',fontsize = 20)
+plot = sns.countplot(data=Salaries,y='employee_residence',order=Salaries['employee_residence'].value_counts().index)
+
+```
+
+
+```python
+plt.figure(figsize = (15,15))
+plt.title('Comapny Location',fontsize = 20,fontweight = 'bold')
+plt.xlabel('Count')
+plt.ylabel('Location',fontsize = 20)
+plot = sns.countplot(data=Salaries,y='company_location',order=Salaries['company_location'].value_counts().index)
+
+```
+
+### For Employee Residence and Company location, the US is the highest in terms of frequency, followed by UK. A total of over 1900 Employees and Companies are resident in the US while other locations record values below 50 for both Employee residence and company location.
+
+## Multivariate analysis
+
+
+```python
+
+```
+
+
+```python
+plot3=px.violin(Salaries,x='employment_type',y='salary_in_usd',box=True)
+plot3.show()
+```
+
+ Similar to the "salary_in_usd" boxplot, this boxplot explains salary levels in data science field for different types of employment types.
+
+### 1. Which Job has highest salary in Data science?
+
+
+```python
+#mean salaries for job titles
+AVG_salaries_by_job_title = Salaries.groupby('job_title')['salary_in_usd'].mean().sort_values(ascending=False)
+
+fig, ax = plt.subplots(figsize=(10, 25))
+ax.barh(AVG_salaries_by_job_title.index, AVG_salaries_by_job_title.values)
+ax.set_title('Average Salaries by Job Title')
+ax.set_xlabel('Salary in USD')
+ax.set_ylabel('Job Title')
+plt.show()
+```
+
+#### Observation:
+1. The plot shows that highest salary by Data Science tech lead is > 400,000 USD and the lowest by Power BI developer is < 3000 USD.
+2. The average salary of workers in the Data Science field is between 100,000-150,000 USD.
+
+### 2. What are the top 10 Data Science jobs in 2023?
+
+
+```python
+salaries_23= Salaries[ Salaries["work_year"] == 2023]
+salaries_23.head()     
+```
+
+
+```python
+salaries_23.job_title.value_counts().head(10)
+```
+
+
+```python
+plt.figure(figsize = (12, 8))
+
+# plot a bar chart
+sns.barplot(x = salaries_23["job_title"].value_counts().sort_values(ascending = False).head(10), 
+            y = salaries_23["job_title"].value_counts().sort_values(ascending = False).head(10).index)
+plt.title('Top 10 Data Science Jobs in 2023', fontsize = 15)
+     
+```
+
+### Observations:
+1. In 2023,the top 10 Data Science jobs are shown in barplot,most popular is DATA ENGINEER.
+2. Data Scientist, Data Engineer, Data Analyst are the top 3 most popular jobs based on the data.
+
+
+### 3. How remote ratio vary from year 2020-2023?
+
+
+```python
+plt.figure(figsize = (12,5))
+sns.histplot(data = Salaries,x = 'remote_ratio',hue = 'work_year',multiple = 'dodge',shrink = 0.8)
+plt.title('Variation of remote ratio from 2020-2023', fontsize = 15)
+```
+
+### 4. Does salary of employee depends on experience level?
+
+
+```python
+plt.figure(figsize = (12,5))
+sns.histplot(data = Salaries,x = 'salary_in_usd',hue = 'experience_level',multiple = 'dodge',shrink = 0.8)
+plt.title('Salary in variation with exprience level', fontsize = 15)
+```
+
+### 5. The top 20 countries with highest salaries in the Data science field?
+
+
+```python
+# Create bar chart
+AVG_Salaries_by_location = Salaries.groupby('company_location')['salary_in_usd'].mean().sort_values(ascending=False)
+Top_20 = AVG_Salaries_by_location.head(20)
+
+plt.figure(figsize=(12,10),dpi=80)
+plt.bar(Top_20.index, Top_20)
+
+# Add labels to the chart
+plt.xlabel('Country')
+plt.ylabel('Salary (USD)')
+plt.title('Top twenty countries with highest average salaries in the data science field')
+plt.xticks(rotation=30, ha='right')
+plt.show()
+```
+
+### 6. How is the distribution of Data Science worker locations?
+
+
+```python
+plt.figure(figsize = (12,5))
+sns.barplot(x = Salaries.groupby("company_location")["employee_residence"].count().sort_values(ascending = False).head(10).index, 
+            y = Salaries.groupby("company_location")["employee_residence"].count().sort_values(ascending = False).head(10))
+plt.title("Company Locations with Most Workers", fontsize = 15)
+```
+
+#### Workers mostly are from United States of America companies.
+
+
+```python
+#Correlation
+Salaries_corr=Salaries.corr()
+Salaries_corr
+```
+
+
+```python
+sns.heatmap(Salaries_corr, annot=True)
+```
+
+## Construction of a pipeline
+
+duplicate data is already done in the data exploration process above thus no further actions need on removal of duplicate values
+
+
+```python
+#importing required libraries
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.compose import ColumnTransformer
+```
+
+
+```python
+#Organizing attributes into list based on data type
+#Putting salary_in_usd as a categorical attribute made the accuracy better
+target = ['salary']
+numerical = ['work_year']
+categorical = ['experience_level', 'employment_type', 'job_title', 'salary_currency', 'employee_residence', 'company_location', 'company_size','remote_ratio','salary_in_usd']
+```
+
+
+```python
+#pipeline for categorical data
+
+cat_si_step = ('si', SimpleImputer(strategy='constant', fill_value='Other'))
+cat_ohe_step = ('ohe', OneHotEncoder(sparse=False, handle_unknown='ignore'))
+cat_steps = [cat_si_step, cat_ohe_step]
+cat_pipe = Pipeline(cat_steps)
+cat_transformers = [('cat', cat_pipe, categorical)]
+```
+
+
+```python
+#Creating pipeline for numerical data
+
+#imputing using fill_value = median
+num_si_step = ('num_si', SimpleImputer(strategy='median'))
+
+#creating MinMaxScale for numerical data 
+num_scale_step = ('num_scale', MinMaxScaler())
+
+#creating transformers for numerical data
+num_steps = [num_si_step, num_scale_step]
+num_pipe = Pipeline(num_steps)
+num_transformers = [('num', num_pipe, numerical)]
+```
+
+
+```python
+ct = ColumnTransformer(transformers=cat_transformers+num_transformers)
+ct.fit(Salaries[categorical + numerical])
+
+X = ct.transform(Salaries[categorical + numerical])
+y = Salaries['salary'].values
+```
+
+
+```python
+#splitting test and training data
+X_train, X_test, y_train, y_test = train_test_split(X,y, test_size=0.2,random_state = 5,shuffle=True)
+
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+```
+
+
+```python
+from sklearn.linear_model import Ridge,Lasso,LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import AdaBoostRegressor
+from sklearn import neighbors
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.svm import SVR
+```
+
+## Linear Regression Code
+
+
+```python
+from sklearn.linear_model import LinearRegression
+
+MRModel = LinearRegression()
+MRModel.fit(X_train, y_train)
+y_pred = MRModel.predict(X_test)
+
+```
+
+
+```python
+from sklearn.metrics import mean_squared_error, r2_score
+
+mse = mean_squared_error(y_test, y_pred)
+rmse =np.sqrt(mean_squared_error(y_test, y_pred))
+r2 = r2_score(y_test, y_pred)*100
+
+
+print("Mean Squared Error:", mse)
+print("R-squared Score:", r2)
+
+```
+
+## Random Forest Regression Code
+
+
+```python
+from sklearn.ensemble import RandomForestRegressor
+
+rf_model = RandomForestRegressor(n_estimators=200, random_state=5)
+rf_model.fit(X_train, y_train)
+y_pred_RF = rf_model.predict(X_test)
+```
+
+
+```python
+RF_mse = mean_squared_error(y_test, y_pred)
+RF_r2 = r2_score(y_test, y_pred_RF)*100
+
+print("Mean Squared Error:", RF_mse)
+print("R-squared Score:", RF_r2)
+```
+
+
+```python
+dt = DecisionTreeRegressor().fit(X_train,y_train)
+knn = KNeighborsRegressor().fit(X_train,y_train)
+ridge=Ridge().fit(X_train,y_train)
+lasso=Lasso().fit(X_train,y_train)
+ada=AdaBoostRegressor().fit(X_train,y_train)
+gbm=GradientBoostingRegressor().fit(X_train,y_train)
+```
+
+
+```python
+models = [ridge,lasso,knn,dt,ada,gbm]
+```
+
+
+```python
+def ML(Y,models):
+    y_pred = models.predict(X_test)
+    mse = mean_squared_error(y_test, y_pred)
+    r2 = r2_score(y_test, y_pred)*100
+    return mse,r2
+
+```
+
+
+```python
+for i in models:
+    print("\n",i,"\n\n different models success rate:",ML('salary',i))
+```
+
+#### Based on the provided evaluation metrics, the models can be ranked from best to worst performance as follows: 
+GradientBoostingRegressor > LinearRegression > RandomForestRegressor > Ridge > lasso >  AdaBoostRegressor >  KNeighborsRegressor >  DecisionTreeRegressor
+
+## Learning Curves
+
+
+```python
+train_sizes, train_scores, test_scores = learning_curve(rf_model, X_train, y_train, n_jobs=-1)
+train_scores_mean = np.mean(train_scores, axis=1)
+test_scores_mean = np.mean(test_scores, axis=1)
+plt.plot(train_sizes, test_scores_mean)
+plt.title('Learning Curve for RF Regressor')
+plt.ylabel('Accuracy')
+plt.legend(loc='best')
+plt.show()
+```
+
+
+```python
+train_sizes, train_scores, test_scores = learning_curve(MRModel, X_train, y_train, n_jobs=-1)
+train_scores_mean = np.mean(train_scores, axis=1)
+test_scores_mean = np.mean(test_scores, axis=1)
+plt.plot(train_sizes, test_scores_mean)
+plt.title('Learning Curve for Linear Regressor')
+plt.ylabel('Accuracy')
+plt.legend(loc='best')
+plt.show()
+```
+
+## Residual Plots
+
+
+```python
+residuals = y_pred - y_test
+
+plt.figure(figsize=(10, 6))
+plt.scatter(y_pred, residuals, alpha=0.5)
+plt.axhline(y=0, color='r', linestyle='-')
+plt.xlabel("Predicted Values")
+plt.ylabel("Residuals")
+plt.title("Residual Plot for Linear Regressor")
+plt.show()
+```
+
+
+```python
+residuals = y_pred_RF - y_test
+
+plt.figure(figsize=(10, 6))
+plt.scatter(y_pred_RF, residuals, alpha=0.5)
+plt.axhline(y=0, color='r', linestyle='-')
+plt.xlabel("Predicted Values")
+plt.ylabel("Residuals")
+plt.title("Residual Plot for Random Forest Regressor")
+plt.show()
+```
+
+
+```python
+
+```
