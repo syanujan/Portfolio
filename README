@@ -1,0 +1,6 @@
+This portfolio holds some of my recent Python, SQL, PowerBI, and Tableau projects.
+
+The python projects mainly compose of dataset analyses and some machine learning models, including feature engineering for better model accuracy.
+The SQL projects consist of query code for various datasets. The queries compose of ETL, and some queries are written to produce results that can be used in later visualizations
+
+The PowerBI and Tableau projects are built from the prior analyses in SQL, as well as Power Query transformations inside the PowerBI software itself.
