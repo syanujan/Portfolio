@@ -1,4 +1,66 @@
-Select * from [dbo].[NashvilleHousing]
+Select * from [dbo].[NashvilleHousing] where YearBuilt is not null
+
+-- The below queries were designed to extract key information from the dataset, which was then imported into Tableau for analysis
+
+-- Creating a column that will be filled only by years
+ALTER TABLE NashvilleHousing
+ADD YearSold INT;
+
+UPDATE NashvilleHousing
+SET YearSold = YEAR(SaleDateConverted);
+
+-- Showing sales by city region
+Select PropertySplitCity,SUM(SalePrice) as SumSalePrice
+From [dbo].[NashvilleHousing]
+Group by PropertySplitCity
+ORDER BY SumSalePrice desc 
+
+-- Showing the Address and Property Type of the properties that were sold
+SELECT PropertySplitAddress, LandUse, SUM(SalePrice) as SumSalePrice
+FROM [dbo].[NashvilleHousing]
+GROUP BY PropertySplitAddress, LandUse
+ORDER BY SumSalePrice desc 
+
+-- Showing the Value and Sold Price of the Property, along with the date it was sold
+SELECT TotalValue, SalePrice, SaleDateConverted
+FROM [dbo].[NashvilleHousing]
+where TotalValue is not null AND SaleDateConverted != '2019-12-13'
+GROUP BY TotalValue, SalePrice, SaleDateConverted
+ORDER BY SaleDateConverted desc 
+
+-- Showing relationship between property type, size of property, and sale price
+SELECT Acreage, LandUse, SUM(SalePrice) as SumSalePrice
+FROM [dbo].[NashvilleHousing]
+where Acreage is not null
+GROUP BY Acreage, LandUse
+ORDER BY SumSalePrice desc 
+
+-- Showing the wealthiest owners after property sales
+SELECT OwnerName, SUM(SalePrice) as SumSalePrice
+FROM [dbo].[NashvilleHousing]
+where OwnerName is not null
+GROUP BY OwnerName
+ORDER BY SumSalePrice desc 
+
+Select LandUse,SUM(SalePrice) as SumSalePrice
+From [dbo].[NashvilleHousing]
+Group by LandUse
+ORDER BY SumSalePrice desc 
+
+-- Showing sales based on year
+SELECT YearSold, SUM(SalePrice) AS SumSalePrice
+FROM [dbo].[NashvilleHousing]
+WHERE YearSold IS NOT NULL
+GROUP BY YearSold
+ORDER BY SumSalePrice DESC
+
+-- Showing sales based on when the property was built
+Select YearBuilt,SUM(SalePrice) as SumSalePrice
+From [dbo].[NashvilleHousing]
+where YearBuilt is not null
+Group by YearBuilt
+ORDER BY YearBuilt desc 
+
 -- Standardize Date Format
 
 Select SaleDate, CONVERT(Date,SaleDate) from [dbo].[NashvilleHousing]
@@ -103,7 +165,3 @@ Order by PropertyAddress
 -- Remove Unused Columns
 Select *
 From dbo.NashvilleHousing
-
-
-ALTER TABLE dbo.NashvilleHousing
-DROP COLUMN OwnerAddress, TaxDistrict, PropertyAddress, SaleDate
